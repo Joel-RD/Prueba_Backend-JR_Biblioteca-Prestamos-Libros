@@ -1,0 +1,39 @@
+{
+  "name": "prueba-backend-nivel-jr",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/run.ts",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "build":"tsc",
+    "start": "node src/dist/run.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "@types/argon2": "^0.14.1",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/pg": "^8.15.5",
+    "@types/supertest": "^6.0.3",
+    "babel-jest": "^30.1.2",
+    "jest": "^30.1.3",
+    "jest-esm-transformer": "^1.0.0",
+    "morgan": "^1.10.1",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
+}
