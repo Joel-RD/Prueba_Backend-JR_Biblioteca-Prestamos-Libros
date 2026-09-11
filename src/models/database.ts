@@ -1,28 +1,39 @@
+import { Pool, type PoolClient } from 'pg';
+import { envConfig } from '../config.js';
 
-import { Pool } from "pg";
-import { configParams } from '../config_params.js'
- 
-const {db_host, db_user, db_password} = configParams;
-const db_connection = new Pool({
-    host: db_host,
-    user: db_user,
-    password: db_password,
-    database: 'Books_eudy_project',
-    port: 5432
+const { dbHost, dbPort, dbUser, dbPassword, dbName } = envConfig;
+
+const pool = new Pool({
+  host: dbHost,
+  port: dbPort,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
 });
 
-db_connection.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-    process.exit(-1);
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
 });
 
-const pool = db_connection;
-export const query = async (query: string, params?: unknown[]) => {
+export { pool };
+
+export const query = async (text: string, params?: unknown[]) => {
+  if (!params) return pool.query(text);
+  return pool.query(text, params);
+};
+
+export const transaction = async <T>(fn: (client: PoolClient) => Promise<T>): Promise<T> => {
+  const client = await pool.connect();
   try {
-    if (!params) return await pool.query(query)
-    return await pool.query(query, params); 
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
   } catch (error) {
-    console.error(error);
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
   }
 };

@@ -15,16 +15,16 @@
    ```
 
 3. **Configura las variables de entorno:**
-   - Copia el archivo `templated_env` a `.env` y completa los valores necesarios:
+   - Copia el archivo `.env.example` a `.env` y completa los valores necesarios:
      ```
-     cp templated_env .env
+     cp .env.example .env
      ```
    - Edita `.env` con tus credenciales de base de datos.
 
 4. **Crea la base de datos y las tablas:**
    - Asegúrate de tener PostgreSQL corriendo.
-   - Crea la base de datos `My_books`.
-   - Ejecuta el script SQL en `src/models/db.sql` para crear las tablas:
+   - Crea la base de datos indicada en `DB_NAME` del `.env` (por defecto `library`).
+   - Ejecuta el script SQL en `src/models/schema.sql` para crear las tablas.
 
 
 ## 🏃‍♂️ Ejecución
@@ -49,10 +49,11 @@ npm test
 ## 📖 Endpoints
 
 | Método | Endpoint                | Descripción                              |
-|--------|------------------------ |------------------------------------------|
+|-------- |------------------------ |------------------------------------------|
 | POST   | `/books`                | Registrar libro                          |
 | POST   | `/user`                 | Registrar usuario                        |
 | POST   | `/borrow`               | Registrar préstamo de libro              |
+| POST   | `/return`               | Registrar devolución de libro            |
 | GET    | `/user/:id/borrow`      | Listar préstamos activos de un usuario   |
 
 ### Ejemplo de payloads
@@ -62,7 +63,7 @@ npm test
   {
     "title": "Book 1",
     "author": "Autor",
-    "age_publication": "2024"
+    "publicationYear": "2024"
   }
   ```
 
@@ -78,7 +79,15 @@ npm test
 - **POST /borrow**
   ```json
   {
-    "title_book": "Book 1",
+    "bookTitle": "Book 1",
+    "email": "juan@mail.com"
+  }
+  ```
+
+- **POST /return**
+  ```json
+  {
+    "bookTitle": "Book 1",
     "email": "juan@mail.com"
   }
   ```
@@ -88,28 +97,42 @@ npm test
 - Un usuario puede tener máximo **3 libros prestados** a la vez.
 - Un libro solo puede prestarse si está en estado **disponible**.
 - Si el libro ya está prestado, devuelve un error claro.
-- Consulta de préstamos activos por usuario.
+- Al devolver un libro, este vuelve a estado **disponible** y se registra la fecha de devolución.
+- Consulta de préstamos activos (sin devolver) por usuario.
+
+## 📝 Respuestas de error
+
+Todos los errores devuelven un JSON estructurado:
+
+```json
+{
+  "error": "The book is currently on loan"
+}
+```
+
+Códigos de estado usados: `400` (validación), `403` (límite de 3 préstamos), `404` (recurso no encontrado), `409` (conflicto: libro prestado o duplicado) y `500` (error interno).
 
 ## 📝 Notas
 
 - El proyecto está escrito en TypeScript.
-- Los tests se encuentran en `test/app.test.js`.
-- El archivo de configuración de la base de datos está en `src/config_params.ts`.
+- La validación de los `body`/`params` se hace con `zod` en `src/utils/validators.ts`.
+- El préstamo (`POST /borrow`) corre dentro de una transacción para evitar condiciones de carrera.
+- Los tests se encuentran en `test/library.test.js`.
+- El archivo de configuración de la base de datos está en `src/config.ts`.
 
 ## 📂 Estructura principal
 
 ```
 src/
   app.ts
-  run.ts
-  config_params.ts
+  server.ts
+  config.ts
   controllers/
   models/
-  repositories/
-  routers/
+  routes/
   utils/
 test/
-  app.test.js
+  library.test.js
 ```
 
 ## 📬 Contacto

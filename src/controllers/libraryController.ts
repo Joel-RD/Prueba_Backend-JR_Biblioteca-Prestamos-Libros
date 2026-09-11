@@ -1,170 +1,170 @@
-
 import { Response, Request } from 'express'
-import { query } from '../models/db_conecction.js'
-import { hashing_password, verify_password, isSegurePassword } from '../utils/hashin_pw.js'
+import { query, transaction } from '../models/database.js'
+import { hashPassword } from '../utils/password.js'
+import { ApiError } from '../utils/apiError.js'
 
-interface Books_Params {
-    title: string;
-    author: string;
-    age_publication: string;
-}
+const MAX_ACTIVE_LOANS = 3
 
-interface User_Params {
-    name: string;
-    email: string;
-    password: string;
-}
+export const createBook = async (req: Request, res: Response) => {
+    const { title, author, publicationYear } = req.body
 
-interface Title_Book {
-    title_book: string;
-    email: string;
-}
+    const existingBook = await query(
+        'select * from books where title = $1;',
+        [title]
+    )
 
-interface Params_Id {
-    id: string;
-}
-
-export const Creating_books = async (req: Request, res: Response) => {
-    try {
-        const { title, author, age_publication }: Books_Params = req.body
-
-         if (!title || !author || !age_publication) {
-            res.status(400).json('Incomplete values')
-            return 
-        }
-
-        const exit_book = 'select * from room_books where title = $1;'
-        const exist_book_result = await query(exit_book, [title])
-
-        if (exist_book_result?.rowCount as number > 0) {
-            return res.status(409).json("The book exits")
-        }
-
-        const consult = 'insert into room_books (title, author, age_publication) values ($1, $2, $3);'
-        const result = await query(consult, [title, author, age_publication]);
-        res.status(201).json("Added book");
-    } catch (error) {
-        res.status(500).json('Error creating book');
-        throw error
+    if ((existingBook?.rowCount ?? 0) > 0) {
+        throw new ApiError(409, 'The book already exists')
     }
+
+    await query(
+        'insert into books (title, author, publication_year) values ($1, $2, $3);',
+        [title, author, publicationYear]
+    );
+
+    res.status(201).json('Added book')
 }
 
-export const Creating_users = async (req: Request, res: Response) => {
-    try {
-        const { name, email, password }: User_Params = req.body;
+export const createUser = async (req: Request, res: Response) => {
+    const { name, email, password } = req.body
 
-        if (!name || !email || !password) {
-            res.status(400).json('Incomplete values')
-            return
-        }
+    const existingUser = await query(
+        'select email from users where email = $1;',
+        [email]
+    )
 
-        if (!isSegurePassword(password)) {
-            return res.status(400).json('The password must be 8 characters, 1 special character, 1 uppercase letter and 1 lowercase letter');
-        }
-
-        const user_exists_query = 'select email from users_authentication where email = $1;';
-        const user_exists_result = await query(user_exists_query, [email]);
-
-        if (user_exists_result?.rowCount == 1) {
-            return res.status(409).json("The user exits");
-        }
-
-        const hash = await hashing_password(password);
-        const insert_query = 'insert into users_authentication (name, email, password) values ($1, $2, $3);';
-        await query(insert_query, [name, email, hash]);
-        return res.status(201).json('User created');
-    } catch (error) {
-        console.log(error);
-        res.status(500).json('Error creating user');
+    if ((existingUser?.rowCount ?? 0) > 0) {
+        throw new ApiError(409, 'The user already exists')
     }
+
+    const passwordHash = await hashPassword(password)
+    await query(
+        'insert into users (name, email, password) values ($1, $2, $3);',
+        [name, email, passwordHash]
+    );
+
+    res.status(201).json('User created')
 }
 
-export const Borrow_Register = async (req: Request, res: Response) => {
-    try {
-        const { title_book, email }: Title_Book = req.body;
+export const registerLoan = async (req: Request, res: Response) => {
+    const { bookTitle, email } = req.body
 
-         if (!title_book || !email) {
-            res.status(400).json('Incomplete values')
-            return
+    await transaction(async (client) => {
+        const existingUser = await client.query(
+            'select * from users where email = $1;',
+            [email]
+        )
+
+        if ((existingUser?.rowCount ?? 0) < 1) {
+            throw new ApiError(404, 'User not found, please register')
         }
 
-        const user_exists_query = 'select * from users_authentication where email = $1;';
-        const user_exists_result = await query(user_exists_query, [email]);
-        if (user_exists_result?.rowCount as number < 1) {
-            return res.status(401).json("Please register, not Unauthorized");
+        const bookRecord = await client.query(
+            'select * from books where title = $1 for update;',
+            [bookTitle]
+        )
+
+        if ((bookRecord?.rowCount ?? 0) < 1) {
+            throw new ApiError(404, 'Book not found')
         }
 
-        const title_exits = 'select * from room_books where title = $1;'
-        const result = await query(title_exits, [title_book]);
-
-        if (result?.rowCount as number < 1) {
-            res.status(404).json('Book not found')
-            return;
+        if (bookRecord?.rows[0].status !== 'available') {
+            throw new ApiError(409, 'The book is currently on loan')
         }
 
-        if (result?.rows[0].status !== 'available') {
-            res.status(417).json('The book is currently on loan')
-            return;
+        const userId = existingUser?.rows[0].id
+        const bookId = bookRecord?.rows[0].id
+
+        const activeLoansResult = await client.query(
+            `SELECT COUNT(*)
+             FROM loans
+             WHERE user_id = $1 AND return_date IS NULL;`,
+            [userId]
+        )
+
+        const activeLoanCount = parseInt(activeLoansResult?.rows[0].count)
+        if (activeLoanCount >= MAX_ACTIVE_LOANS) {
+            throw new ApiError(403, 'User already has 3 borrowed books')
         }
 
-        const user_id = user_exists_result?.rows[0].users_id;
-        const book_id = result?.rows[0].books_id
+        await client.query(
+            'insert into loans (user_id, book_id) values ($1, $2);',
+            [userId, bookId]
+        )
 
-        // Validar que el usuario no tenga ya 3 libros prestados activos (sin devolver)
-        const count_borrowed_query = `
-          SELECT COUNT(*) 
-          FROM borrow_books 
-          WHERE users_id = $1 AND return_date IS NULL;
-        `;
-        const count_result = await query(count_borrowed_query, [user_id]);
-        const borrowed_count = parseInt(count_result?.rows[0].count);
-        if (borrowed_count >= 3) {
-            return res.status(403).json("User already has 3 borrowed books");
-        }
+        await client.query(
+            'update books set status = $1 where id = $2;',
+            ['borrowed', bookId]
+        )
+    })
 
-        const borrowed_insert = 'insert into borrow_books (users_id, books_id) values ($1, $2);'
-        const borrowed_result = query(borrowed_insert, [user_id, book_id]);
-
-        //change the status of the book
-        const change_status = 'update room_books set status = $1 where books_id = $2 ;'
-        const change_status_params = query(change_status, ['borrowed', book_id])
-
-        res.status(201).json('The book is added from library')
-    } catch (error) {
-        console.log(error)
-        throw error
-    }
+    res.status(201).json('The book is added from library')
 }
 
-export const User_borrowed_id = async (req: Request, res: Response) => {
-    try {
-        const id_number = parseInt(req.params.id);
+export const returnBook = async (req: Request, res: Response) => {
+    const { bookTitle, email } = req.body
 
-         if (!req.params.id) {
-            return res.status(400).json("Incomplete values");
+    await transaction(async (client) => {
+        const existingUser = await client.query(
+            'select * from users where email = $1;',
+            [email]
+        )
+
+        if ((existingUser?.rowCount ?? 0) < 1) {
+            throw new ApiError(404, 'User not found, please register')
         }
 
-        if (isNaN(id_number)) {
-            return res.status(417).json("params not found, please insert valid param");
+        const activeLoanResult = await client.query(
+            `select l.id as loan_id, l.book_id
+             from loans l
+             join books b on l.book_id = b.id
+             join users u on l.user_id = u.id
+             where u.email = $1 and b.title = $2 and l.return_date is null
+             for update of l;`,
+            [email, bookTitle]
+        )
+
+        if ((activeLoanResult?.rowCount ?? 0) < 1) {
+            throw new ApiError(404, 'No active loan found for this book')
         }
 
-        const user_exists_query = 'select * from users_authentication where users_id = $1;';
-        const user_exists_result = await query(user_exists_query, [id_number]);
-        if (user_exists_result?.rowCount as number < 1) {
-            return res.status(404).json("User not found, please register");
-        }
+        const loanId = activeLoanResult?.rows[0].loan_id
+        const bookId = activeLoanResult?.rows[0].book_id
 
-        const consutl_list_borrowed_book = 'select u.name, u.email, b.title, b.author, b.status from users_authentication u join borrow_books bb on u.users_id = bb.users_id join room_books b on bb.books_id = b.books_id where u.users_id = $1;'
-        const consult_list_borrowed_book_result = await query(consutl_list_borrowed_book, [id_number])
+        await client.query(
+            'update loans set return_date = now() where id = $1;',
+            [loanId]
+        )
 
-        if (consult_list_borrowed_book_result?.rowCount as number < 1) {
-            return res.status(400).json("The bookstore is empty")
-        }
-                
-        res.status(201).json(consult_list_borrowed_book_result?.rows);
-    } catch (error) {
-        console.error(error);
-        throw error
+        await client.query(
+            'update books set status = $1 where id = $2;',
+            ['available', bookId]
+        )
+    })
 
+    res.status(200).json('The book was returned successfully')
+}
+
+export const getActiveLoansByUser = async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.id)
+
+    const existingUser = await query(
+        'select * from users where id = $1;',
+        [userId]
+    )
+
+    if ((existingUser?.rowCount ?? 0) < 1) {
+        throw new ApiError(404, 'User not found, please register')
     }
+
+    const activeLoans = await query(
+        `select u.name, u.email, b.title, b.author, b.status
+         from users u
+         join loans l on u.id = l.user_id
+         join books b on l.book_id = b.id
+         where u.id = $1 and l.return_date is null;`,
+        [userId]
+    )
+
+    res.status(200).json(activeLoans?.rows ?? [])
 }

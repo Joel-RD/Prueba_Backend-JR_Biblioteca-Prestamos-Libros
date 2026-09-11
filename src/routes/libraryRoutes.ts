@@ -1,23 +1,29 @@
+import { Router } from 'express';
+import {
+  createBook,
+  createUser,
+  registerLoan,
+  returnBook,
+  getActiveLoansByUser,
+} from '../controllers/libraryController.js';
+import {
+  bookSchema,
+  userSchema,
+  borrowSchema,
+  userIdParamSchema,
+  validate,
+} from '../utils/validators.js';
 
-import express from 'express';
-import booksRepository from '../repositories/taskRepository.js'
+const router = Router();
 
-const router = express.Router();
+router.post('/books', validate(bookSchema), createBook);
 
-router.post('/books', (req, res) => {
-    booksRepository.create_book(req, res)
-} )
+router.post('/user', validate(userSchema), createUser);
 
-router.post('/user', (req, res) => {
-    booksRepository.create_user(req, res)
-})
+router.post('/borrow', validate(borrowSchema), registerLoan);
 
-router.post('/borrow', (req, res) => {
-    booksRepository.Creating_borrow(req, res)
-})
+router.post('/return', validate(borrowSchema), returnBook);
 
-router.get('/user/:id/borrow', (req, res) => {
-    booksRepository.Borrow_user_id(req, res)
-})
+router.get('/user/:id/borrow', validate(userIdParamSchema, 'params'), getActiveLoansByUser);
 
 export default router;
