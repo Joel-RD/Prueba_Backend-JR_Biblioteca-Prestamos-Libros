@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitectura del sistema · Biblioteca</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1200px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Biblioteca</p>
+    <h1>Arquitectura del servicio REST</h1>
+
+    <svg viewBox="0 0 1000 576" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-title architecture-desc">
+      <title id="architecture-title">Arquitectura del servicio REST</title>
+      <desc id="architecture-desc">Diagrama de arquitectura que muestra las peticiones HTTP del cliente pasando por la API Express, la validación Zod, las reglas de negocio transaccionales y la base de datos PostgreSQL.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- Zones -->
+      <rect x="252" y="76" width="236" height="352" rx="8"
+            fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="348" y="80" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="376" y="89" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace"
+            text-anchor="middle" letter-spacing="0.14em">APLICACIÓN</text>
+
+      <rect x="572" y="296" width="232" height="128" rx="8"
+            fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="660" y="300" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="688" y="309" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace"
+            text-anchor="middle" letter-spacing="0.14em">DATOS</text>
+
+      <!-- Arrows (behind boxes) -->
+      <line x1="208" y1="140" x2="280" y2="140" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <line x1="376" y1="180" x2="376" y2="212" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="376" y1="292" x2="376" y2="320" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="472" y1="360" x2="600" y2="360" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Arrow labels -->
+      <rect x="212" y="120" width="64" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="244" y="131" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">HTTP · JSON</text>
+
+      <rect x="512" y="340" width="48" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="536" y="351" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SQL · TX</text>
+
+      <!-- Node: Cliente -->
+      <rect x="64" y="100" width="144" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="64" y="100" width="144" height="80" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <rect x="72" y="108" width="36" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.40)" stroke-width="0.8"/>
+      <text x="90" y="117" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INPUT</text>
+      <text x="136" y="142" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Cliente</text>
+      <text x="136" y="156" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Postman · curl</text>
+
+      <!-- Node: API REST Express (focal) -->
+      <rect x="280" y="100" width="192" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="100" width="192" height="80" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="288" y="108" width="28" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="302" y="117" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
+      <text x="376" y="142" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">API REST Express</text>
+      <text x="376" y="156" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">app.ts · :3000</text>
+
+      <!-- Node: Validación -->
+      <rect x="280" y="212" width="192" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="212" width="192" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="288" y="220" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="302" y="229" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VAL</text>
+      <text x="376" y="254" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Validación Zod</text>
+      <text x="376" y="268" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">utils/validators.ts</text>
+
+      <!-- Node: Reglas de negocio -->
+      <rect x="280" y="320" width="192" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="320" width="192" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="288" y="328" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="304" y="337" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BIZ</text>
+      <text x="376" y="362" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Reglas de negocio</text>
+      <text x="376" y="376" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">controllers · tx</text>
+
+      <!-- Node: PostgreSQL -->
+      <rect x="600" y="320" width="176" height="80" rx="6" fill="#f5f5f5"/>
+      <rect x="600" y="320" width="176" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="608" y="328" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="622" y="337" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+      <text x="688" y="362" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PostgreSQL</text>
+      <text x="688" y="376" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">library · :5432</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="488" x2="960" y2="488" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="504" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="524" width="16" height="12" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="60" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">API principal</text>
+
+      <rect x="180" y="524" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="200" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Backend</text>
+
+      <rect x="296" y="524" width="16" height="12" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="316" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Datos / store</text>
+
+      <rect x="412" y="524" width="16" height="12" rx="2" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <text x="432" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Cliente</text>
+
+      <line x1="512" y1="528" x2="540" y2="528" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="548" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">HTTP request</text>
+
+      <line x1="668" y1="528" x2="696" y2="528" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="704" y="532" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Llamada int.</text>
+    </svg>
+  </div>
+</body>
+</html>
